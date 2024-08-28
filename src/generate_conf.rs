@@ -4,30 +4,72 @@ use std::{
     io::{Error, Write},
 };
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct ServiceFile {
     unit: Option<Vec<String>>,
     service: Option<Vec<String>>,
     install: Option<Vec<String>>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-struct Service<'a> {
-    name: &'a str,
-    root_dit: &'a str,
-    build_commands: Vec<&'a str>,
-    environment: Option<Vec<&'a str>>,
-    service_executable: &'a str,
+#[derive(Serialize, Deserialize)]
+struct Service {
+    name: String,
+    root_dir: String,
+    build_commands: Vec<String>,
+    environment: Option<Vec<String>>,
+    service_executable: String,
     overwrite: bool,
     service_file: Option<ServiceFile>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-struct ConfigFile<'a> {
-    repository: &'a str,
-    services_dir: &'a str,
-    destination: &'a str,
-    services: Vec<Service<'a>>,
+#[derive(Serialize, Deserialize)]
+struct ConfigFile {
+    repository: String,
+    services_dir: String,
+    destination: String,
+    services: Vec<Service>,
+}
+
+impl Default for ServiceFile {
+    fn default() -> Self {
+        ServiceFile {
+            unit: Some(vec!["Description=service-name".to_owned()]),
+            service: None,
+            install: None,
+        }
+    }
+}
+
+impl Default for Service {
+    fn default() -> Self {
+        Service {
+            name: "service-name".to_owned(),
+            root_dir: "/var/www/your_repository/backend".to_owned(),
+            build_commands: vec![
+                "gleam build".to_owned(),
+                "mv ${root_dir}/build/erlang-shipment ${destination}".to_owned(),
+            ],
+            environment: Some(vec![
+                "ENVIRONMENT=production".to_owned(),
+                "SECRET=some_secret_key".to_owned(),
+                "PORT=4020".to_owned(),
+            ]),
+            service_executable: "entrypoint.sh".to_owned(),
+            overwrite: true,
+            service_file: Some(ServiceFile::default()),
+        }
+    }
+}
+
+impl Default for ConfigFile {
+    fn default() -> Self {
+        ConfigFile {
+            repository: "https://github.com/your-repository/link".to_owned(),
+            services_dir: "/lib/systemd/system".to_owned(),
+            destination: "/var/www".to_owned(),
+            services: vec![Service::default()],
+        }
+    }
 }
 
 pub fn generate(user_path: &str) -> Result<String, Error> {
