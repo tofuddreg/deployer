@@ -12,20 +12,16 @@ fn main() {
         return;
     }
 
-    if args.contains(&"-h".to_string()) {
+    if args.iter().any(|arg| arg == "-h") {
         help::help();
         return;
-    } else if args.contains(&"config".to_string()) {
+    } else if args.iter().any(|arg| arg == "config") {
         if args.len() < 3 {
             println!("{}", HELP_MSG);
             return;
         }
-        let s: String = args[2].clone();
-        let res = generate_conf::generate(&s);
-        match res {
-            Ok(path) => println!("path specified: {}", path),
-            Err(e) => println!("{}", e),
-        }
+        generate_conf::generate(&args[2]).unwrap();
+        println!("Path specified.");
     }
     println!("exit success");
 }

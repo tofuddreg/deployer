@@ -3,11 +3,12 @@ struct Command<'a> {
     description: &'a str,
 }
 
+/// Display list of available Deployer commands.
 pub fn help() {
     let commands = [
         Command {
             name: "config <path>",
-            description: "\tSpecify config file to use (generate if doesn't exist).",
+            description: "\tGenerate config and run Deployer with specified config.",
         },
         Command {
             name: "start <service>",
