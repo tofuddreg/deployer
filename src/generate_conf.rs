@@ -3,7 +3,7 @@ use std::{
     io::{Result, Write},
 };
 
-mod file_struct;
+pub mod file_struct;
 
 /// Generate config file if does not exist.
 /// Any `user_path` is valid but blank.
@@ -28,13 +28,14 @@ pub fn generate(user_path: &str) -> Result<()> {
 
 /// Used in `generate(user_path: &str)` fuction
 /// to format path to the file.
-fn validate_path(path: &mut String) {
+pub fn validate_path(path: &mut String) {
     if !path.ends_with("deployer-config.json") {
         if !path.ends_with("/") {
             path.push_str("/");
         }
         path.push_str("deployer-config.json");
     }
+    println!("path: {}", path);
 }
 
 /// This function is to generate default deployer

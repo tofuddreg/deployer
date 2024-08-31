@@ -1,27 +1,36 @@
-use std::env;
+use std::{env, io::ErrorKind};
 
 mod generate_conf;
 mod help;
-
-const HELP_MSG: &str = "Use flag -h to see the documentation.";
+mod macros;
+mod run_deployer;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        println!("{}", HELP_MSG);
-        return;
-    }
+    arg_len!(args.len(), 2, macros::HELP_MSG);
 
-    if args.iter().any(|arg| arg == "-h") {
-        help::help();
-        return;
-    } else if args.iter().any(|arg| arg == "config") {
-        if args.len() < 3 {
-            println!("{}", HELP_MSG);
-            return;
-        }
-        generate_conf::generate(&args[2]).unwrap();
-        println!("Path specified.");
+    match args[1].as_str() {
+        "--help" => help::help(),
+        "config" => handle_generate(&args),
+        "run" => handle_run(&args),
+        _ => println!("{}", macros::HELP_MSG),
     }
-    println!("exit success");
+}
+
+fn handle_generate(args: &[String]) {
+    arg_len!(args.len(), 3, macros::HELP_MSG);
+    match generate_conf::generate(&args[2]) {
+        Ok(()) => println!("Created successfully."),
+        Err(e) => match e.kind() {
+            ErrorKind::AlreadyExists => println!("Already exists."),
+            _ => panic!("An error occured while generating config file: {e}"),
+        },
+    }
+}
+
+fn handle_run(args: &[String]) {
+    arg_len!(args.len(), 3, macros::HELP_MSG);
+    let mut path: String = String::from(&args[2]);
+    generate_conf::validate_path(&mut path);
+    run_deployer::run(&path);
 }

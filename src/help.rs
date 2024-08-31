@@ -8,7 +8,11 @@ pub fn help() {
     let commands = [
         Command {
             name: "config <path>",
-            description: "\tGenerate config and run Deployer with specified config.",
+            description: "\tGenerate config file.",
+        },
+        Command {
+            name: "run <path to config>",
+            description: "Start Deployer.",
         },
         Command {
             name: "start <service>",
