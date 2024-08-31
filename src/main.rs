@@ -5,14 +5,15 @@ mod help;
 mod macros;
 mod run_deployer;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     arg_len!(args.len(), 2, macros::HELP_MSG);
 
     match args[1].as_str() {
         "--help" => help::help(),
         "config" => handle_generate(&args),
-        "run" => handle_run(&args),
+        "run" => handle_run(&args).await,
         _ => println!("{}", macros::HELP_MSG),
     }
 }
@@ -22,15 +23,15 @@ fn handle_generate(args: &[String]) {
     match generate_conf::generate(&args[2]) {
         Ok(()) => println!("Created successfully."),
         Err(e) => match e.kind() {
-            ErrorKind::AlreadyExists => println!("Already exists."),
+            ErrorKind::AlreadyExists => panic!("The configuration file alredy exists."),
             _ => panic!("An error occured while generating config file: {e}"),
         },
     }
 }
 
-fn handle_run(args: &[String]) {
+async fn handle_run(args: &[String]) {
     arg_len!(args.len(), 3, macros::HELP_MSG);
     let mut path: String = String::from(&args[2]);
     generate_conf::validate_path(&mut path);
-    run_deployer::run(&path);
+    run_deployer::run(&path).await;
 }

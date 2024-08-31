@@ -48,5 +48,6 @@ pub fn validate_path(path: &mut String) {
 fn write_config(file: &mut File) -> Result<()> {
     let config_file = file_struct::ConfigFile::default();
     let data = serde_json::to_string_pretty(&config_file)?;
-    writeln!(file, "{}", data)
+    writeln!(file, "{}", data)?;
+    file.flush()
 }

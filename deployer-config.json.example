@@ -1,0 +1,82 @@
+// deployer directory structure
+// /deployer/*
+//    /source/*
+//        /repository_name/*
+//            /27_08_2024_0956/*
+//                /backend/...
+//                /frontend/...
+//    /deployer-config.json
+//
+// Check for updates on deployer reload -> {
+//    compare existing services in `/sys/systemctl/...`
+//    with existing services' names in the config file
+//
+//    if don't match -> suggest `deployer restart`
+//    else -> coninue
+// }
+// Deployer will recreate services if they exist.
+// Find/name services after services[index].name
+{
+  "repository": "github.com/author/project",
+  "token": "your-token-here",
+  "services_dir": "/lib/systemd/system",
+  // Deployer will automatically pull the project into
+  // /var/www/deployer/
+  "destination": "/var/www",
+  "services": [
+    {
+      "name": "auth-service",
+      "root_dir": "./source/backend/auth-service",
+      "build_commands": [
+        "gleam build",
+        //  ${wildcard}                       ${wildcard}
+        "mv ${root_dir}/build/erlang-shipment ${destination}"
+        // /var/www/erlang-shipment/*
+      ],
+      "environment": [
+        "ENVIRONMENT=production",
+        "SECRET=some_secret_key",
+        "PORT=4020"
+      ],
+      // service file will be created automatically
+      // and it will execute this file
+      "service_executable": "entrypoint.sh",
+      // will replace existing folder (if exists)
+      "overwrite": true,
+      //                          _day_month_year_hoursminutes
+      // otherwise will give it postfix `_27_08_2024_1047`
+      //
+      // nullable
+      "service_file": {
+        "unit": [
+          "Description=auth-service"
+        ],
+        "service": [
+          "WorkingDirectory=/var/www/olywka-shop.com.ua/backend",
+          "Type=simple",
+          "Restart=always",
+          "RestartSec=5s"
+        ],
+        "install": [
+          "WantedBy=multi-user.target"
+        ]
+      }
+    },
+    {
+      "name": "product-service",
+      "root_dir": "./source/backend/product-service",
+      "build_commands": [
+        "go build",
+        "mv ${root_dir}/order_service ${destination}"
+      ],
+      "environment": [
+        "ENVIRONMENT=production",
+        "SECRET=some_secret_key",
+        "PORT=4020"
+      ],
+      "service_executable": "entrypoint.sh",
+      "overwrite": true,
+      "service_file": null
+    }
+  ]
+}
