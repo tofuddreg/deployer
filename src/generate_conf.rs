@@ -49,5 +49,6 @@ fn write_config(file: &mut File) -> Result<()> {
     let config_file = file_struct::ConfigFile::default();
     let data = serde_json::to_string_pretty(&config_file)?;
     writeln!(file, "{}", data)?;
-    file.flush()
+    file.flush()?;
+    Ok(())
 }
