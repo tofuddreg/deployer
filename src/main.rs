@@ -31,7 +31,7 @@ fn handle_generate(args: &[String]) {
 
 async fn handle_run(args: &[String]) {
     arg_len!(args.len(), 3, macros::HELP_MSG);
-    let mut path: String = String::from(&args[2]);
+    let mut path = String::from(&args[2]);
     generate_conf::validate_path(&mut path);
     run_deployer::run(&path).await;
 }

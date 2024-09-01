@@ -38,7 +38,7 @@ pub fn validate_path(path: &mut String) {
     println!("path: {}", path);
 }
 
-/// This function is to generate default deployer
+/// This function is for generating default deployer
 /// configuration file structure. Used when deployer
 /// generates configuration file for the first time.
 ///

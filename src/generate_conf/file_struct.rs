@@ -1,5 +1,10 @@
 use serde_derive::{Deserialize, Serialize};
 
+#[derive(Debug, Deserialize)]
+pub struct Commit {
+    pub sha: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ServiceFile {
     pub unit: Option<Vec<String>>,
@@ -21,6 +26,7 @@ pub struct Service {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigFile {
     pub repository: String,
+    pub branch: String,
     pub token: String,
     pub services_dir: String,
     pub destination: String,
@@ -61,6 +67,7 @@ impl Default for Service {
 impl Default for ConfigFile {
     fn default() -> Self {
         ConfigFile {
+            branch: "main".to_owned(),
             repository: "https://github.com/your-repository/link".to_owned(),
             token: "YOUR-GITHUB-TOKEN-HERE".to_owned(),
             services_dir: "/lib/systemd/system".to_owned(),
