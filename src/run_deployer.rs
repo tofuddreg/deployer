@@ -138,8 +138,8 @@ async fn ping(token: &str, root_dir: &str, repository: &RepositoryInfo) -> Resul
                 Err(e) => match e.code() {
                     git2::ErrorCode::Exists => {
                         let new_dest = update_destination(&destination, 1);
-                        println!("NEW DESTINATION: {}", new_dest);
-                        Repository::clone(&url, &new_dest).unwrap();
+                        println!("updated destination: {}", new_dest);
+                        Repository::clone(&url, &new_dest).expect("Failed to fetch repository");
                     }
                     _ => panic!("Failed to fetch repository: {e}"),
                 },
@@ -149,19 +149,32 @@ async fn ping(token: &str, root_dir: &str, repository: &RepositoryInfo) -> Resul
     }
 }
 
-// TODO: fix this function.
-//   The problem is that it appends _2, _3, ...
-//   to its original name (such as 01_Sep_0938_1_2_3)
 fn update_destination(from: &str, index: i32) -> String {
     let path = path::Path::new(from);
     if !path.exists() {
         return from.to_owned();
     }
 
-    let mut dest = String::from(from);
-    let index_str = format!("_{}", index);
-    dest.push_str(&index_str);
-    update_destination(&dest, index + 1)
+    let base_path: Vec<&str> = from.split("_").collect();
+    let mut base = String::from(from);
+    if base_path.len() == 5 {
+        base = String::from(base_path[0]);
+        base.push_str("_");
+        base.push_str(base_path[1]);
+        base.push_str("_");
+        base.push_str(base_path[2]);
+        base.push_str("_");
+        base.push_str(base_path[3]);
+    }
+
+    let index_str;
+    if index < 10 {
+        index_str = format!("_0{}", index);
+    } else {
+        index_str = format!("_{}", index);
+    }
+    base.push_str(&index_str);
+    update_destination(&base, index + 1)
 }
 
 fn append_time(root: &str) -> String {
