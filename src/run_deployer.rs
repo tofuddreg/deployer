@@ -1,18 +1,10 @@
-use crate::generate_conf::file_struct::{Commit, ConfigFile};
-use chrono::{prelude::DateTime, Local};
-use git2::Repository;
-use reqwest::{Client, Error, Response};
+use crate::generate_conf::file_struct::ConfigFile;
 use serde_json;
-use std::{fs::File, io::Read, path};
-use tokio::time::{self, Duration};
+use std::{fs::File, io::Read, path::Path};
 
-/// Local struct. Used to pass
-/// these three fields across functions.
-struct RepositoryInfo {
-    pub url: String,
-    pub author: String,
-    pub name: String,
-}
+mod pull;
+
+use pull::{ping, RepositoryInfo};
 
 /// Function that starts Deployer. It makes
 /// request to GitHub's REST API every 60 seconds.
@@ -24,11 +16,11 @@ struct RepositoryInfo {
 pub async fn run(path: &str) {
     let config = deserialise(path);
 
-    if config.token == "" || config.token == "YOUR-GITHUB-TOKEN-HERE" {
+    if config.token.is_empty() || config.token == "YOUR-GITHUB-TOKEN-HERE" {
         panic!("Github token is not specified!");
     }
 
-    if config.repository == "" || config.repository == "https://github.com/your-repository/link" {
+    if config.repository.is_empty() || config.repository == "github.com/your-repository/link" {
         panic!("Github repository is not specified!");
     }
 
@@ -42,7 +34,8 @@ pub async fn run(path: &str) {
         panic!("No services specified!");
     }
 
-    ping(&config.token, &config.destination, &repository)
+    let token = format!("token {}", config.token);
+    ping(&token, &config.destination, &repository)
         .await
         .unwrap();
 }
@@ -88,7 +81,7 @@ fn url_fmt(url: &str, branch: &str) -> RepositoryInfo {
 /// Check if specified directory exists.
 /// Panics if it does not.
 fn validate_dir(dir: &str) {
-    let path = path::Path::new(dir);
+    let path = Path::new(dir);
     if !path.exists() {
         panic!("Path \"{}\" does not exist!", dir);
     }
@@ -106,146 +99,9 @@ fn deserialise(path: &str) -> ConfigFile {
     serde_json::from_slice(&buf).expect("Failed to parse json config")
 }
 
-/// This function makes request to the GitHub's REST API.
-/// Returns error if fails to send request or to parse response body.
-async fn ping(token: &str, root_dir: &str, repository: &RepositoryInfo) -> Result<(), Error> {
-    let client = reqwest::Client::new();
-    let mut last_commit = String::from("");
-    loop {
-        // Make request
-        let token = format!("token {}", token);
-        let res = send_request(&repository.url, &token, &client).await?;
-
-        // Panic if some error
-        if !res.status().is_success() {
-            println!("Failed to fetch data: {}", res.status());
-            continue;
-        }
-
-        let body = res.text().await?;
-        let response: Commit = serde_json::from_str(&body).expect("Failed to parse response body");
-
-        // Check for new commits
-        if last_commit != response.sha {
-            last_commit = response.sha.clone();
-            let url = format!(
-                "https://github.com/{}/{}.git",
-                repository.author, repository.name
-            );
-            pull_repository(&url, root_dir).expect("Failed to fetch repository");
-        }
-        time::sleep(Duration::from_secs(60)).await;
-    }
-}
-
-async fn send_request(url: &str, token: &str, client: &Client) -> Result<Response, Error> {
-    let response = client
-        .get(url)
-        .header("Authorization", token)
-        .header("User-Agent", "request")
-        .send()
-        .await?;
-    Ok(response)
-}
-
-fn pull_repository(url: &str, root_dir: &str) -> Result<(), git2::Error> {
-    let destination = append_time(&root_dir);
-
-    // Pull repository
-    match Repository::clone(url, &destination) {
-        Ok(_) => {
-            println!("Fetched from remote branch to {}", destination);
-            Ok(())
-        }
-        Err(e) => match e.code() {
-            git2::ErrorCode::Exists => {
-                let new_dest = update_destination(true, destination, 1);
-                println!("updated destination: {}", new_dest);
-                Repository::clone(url, &new_dest).expect("Failed to fetch repository");
-                Ok(())
-            }
-            _ => Err(e),
-        },
-    }
-}
-
-/// Recursive function. Checks if directory already exists
-/// and appends available index to that folder so it is possible
-/// to pull repository without issues.
-///
-/// Panics if fails to split
-/// base path on underscores (_) into less than four pieces.
-fn update_destination(exists: bool, mut from: String, index: i32) -> String {
-    if !exists {
-        return from;
-    }
-
-    let from_split = from.clone();
-    let base_path: Vec<&str> = from_split.split("_").collect();
-
-    if base_path.len() < 4 {
-        panic!("Failed to format folder name. Try removing all repeating folders or try again in a minute.");
-    }
-
-    // assemble base of the destination path
-    let index_str;
-    from = format!(
-        "{}_{}_{}_{}",
-        base_path[0], base_path[1], base_path[2], base_path[3]
-    );
-
-    if index < 10 {
-        index_str = format!("_0{}", index);
-    } else {
-        index_str = format!("_{}", index);
-    }
-
-    from.push_str(&index_str);
-    update_destination(check_existance(&from), from, index + 1)
-}
-
-fn check_existance(path: &str) -> bool {
-    let dir = path::Path::new(&path);
-    dir.exists()
-}
-
-fn append_time(root: &str) -> String {
-    let mut destination = String::from(root);
-    let now: DateTime<Local> = Local::now();
-    let formatted_date = now.format("%d_%b_%Y_%H%M").to_string();
-    destination.push_str(&formatted_date);
-    destination
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Test destination modifier
-    #[test]
-    fn test_non_existent_path() {
-        let non_existent_path = String::from("01_Sep_2024_1308");
-        let result = update_destination(false, non_existent_path.clone(), 1);
-        assert_eq!(result, non_existent_path);
-    }
-
-    #[test]
-    #[should_panic(
-        expected = "Failed to format folder name. Try removing all repeating folders or try again in a minute."
-    )]
-    fn test_invalid_path_format() {
-        let invalid_path = String::from("01_Sep_2024");
-        update_destination(true, invalid_path, 1);
-    }
-
-    #[test]
-    fn test_valid_path_format() {
-        let valid_path = String::from("01_Sep_2024_1307");
-        let result = update_destination(true, valid_path, 1);
-
-        // Ensure the format is correctly updated
-        assert_eq!(result, "01_Sep_2024_1307_01");
-    }
 
     // Test URL formatter
     #[test]

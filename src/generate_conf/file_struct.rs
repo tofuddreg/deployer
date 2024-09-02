@@ -68,7 +68,7 @@ impl Default for ConfigFile {
     fn default() -> Self {
         ConfigFile {
             branch: "main".to_owned(),
-            repository: "https://github.com/your-repository/link".to_owned(),
+            repository: "github.com/your-repository/link".to_owned(),
             token: "YOUR-GITHUB-TOKEN-HERE".to_owned(),
             services_dir: "/lib/systemd/system".to_owned(),
             destination: "/var/www".to_owned(),
