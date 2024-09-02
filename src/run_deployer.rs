@@ -1,7 +1,7 @@
 use crate::generate_conf::file_struct::{Commit, ConfigFile};
 use chrono::{prelude::DateTime, Local};
 use git2::Repository;
-use reqwest::Error;
+use reqwest::{Client, Error, Response};
 use serde_json;
 use std::{fs::File, io::Read, path};
 use tokio::time::{self, Duration};
@@ -113,12 +113,8 @@ async fn ping(token: &str, root_dir: &str, repository: &RepositoryInfo) -> Resul
     let mut last_commit = String::from("");
     loop {
         // Make request
-        let res = client
-            .get(&repository.url)
-            .header("Authorization", format!("token {}", token))
-            .header("User-Agent", "request")
-            .send()
-            .await?;
+        let token = format!("token {}", token);
+        let res = send_request(&repository.url, &token, &client).await?;
 
         // Panic if some error
         if !res.status().is_success() {
@@ -131,36 +127,53 @@ async fn ping(token: &str, root_dir: &str, repository: &RepositoryInfo) -> Resul
 
         // Check for new commits
         if last_commit != response.sha {
-            println!("New commit found!");
             last_commit = response.sha.clone();
-
-            // `git pull` logic here:
             let url = format!(
                 "https://github.com/{}/{}.git",
                 repository.author, repository.name
             );
-            let destination = append_time(&root_dir);
-
-            // Pull repository
-            match Repository::clone(&url, &destination) {
-                Ok(_) => println!("Fetched from remote branch to {}", destination),
-                Err(e) => match e.code() {
-                    git2::ErrorCode::Exists => {
-                        let new_dest = update_destination(true, destination, 1);
-                        println!("updated destination: {}", new_dest);
-                        Repository::clone(&url, &new_dest).expect("Failed to fetch repository");
-                    }
-                    _ => panic!("Failed to fetch repository: {e}"),
-                },
-            }
+            pull_repository(&url, root_dir).expect("Failed to fetch repository");
         }
         time::sleep(Duration::from_secs(60)).await;
     }
 }
 
+async fn send_request(url: &str, token: &str, client: &Client) -> Result<Response, Error> {
+    let response = client
+        .get(url)
+        .header("Authorization", token)
+        .header("User-Agent", "request")
+        .send()
+        .await?;
+    Ok(response)
+}
+
+fn pull_repository(url: &str, root_dir: &str) -> Result<(), git2::Error> {
+    let destination = append_time(&root_dir);
+
+    // Pull repository
+    match Repository::clone(url, &destination) {
+        Ok(_) => {
+            println!("Fetched from remote branch to {}", destination);
+            Ok(())
+        }
+        Err(e) => match e.code() {
+            git2::ErrorCode::Exists => {
+                let new_dest = update_destination(true, destination, 1);
+                println!("updated destination: {}", new_dest);
+                Repository::clone(url, &new_dest).expect("Failed to fetch repository");
+                Ok(())
+            }
+            _ => Err(e),
+        },
+    }
+}
+
 /// Recursive function. Checks if directory already exists
 /// and appends available index to that folder so it is possible
-/// to pull repository without issues. Panics if fails to split
+/// to pull repository without issues.
+///
+/// Panics if fails to split
 /// base path on underscores (_) into less than four pieces.
 fn update_destination(exists: bool, mut from: String, index: i32) -> String {
     if !exists {
