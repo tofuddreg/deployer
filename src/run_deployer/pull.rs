@@ -1,9 +1,12 @@
-use crate::generate_conf::file_struct::Commit;
+use crate::generate_conf::file_struct::{Commit, ConfigFile};
+use build::build;
 use chrono::{prelude::DateTime, Local};
 use git2::Repository;
 use reqwest::{Client, Error, Response};
-use std::path::Path;
+use std::{fmt::Display, path::Path};
 use tokio::time::{self, Duration};
+
+mod build;
 
 /// Local struct. Used to pass
 /// these three fields across functions.
@@ -13,23 +16,45 @@ pub struct RepositoryInfo {
     pub name: String,
 }
 
+#[derive(Debug)]
+enum FolderFormatError {
+    FailedToFormat,
+}
+
+impl std::error::Error for FolderFormatError {}
+impl Display for FolderFormatError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let message = match self {
+            Self::FailedToFormat => "Failed to format folder name. Try removing all repeating folders or try again in a minute.",
+        };
+        write!(f, "FolderFormatError: {message}")
+    }
+}
+
 /// This function makes request to the GitHub's REST API.
-/// Returns error if fails to send request or to parse response body.
-pub async fn ping(token: &str, root_dir: &str, repository: &RepositoryInfo) -> Result<(), Error> {
+/// Also builds "services" that are specified in the cfg file.
+pub async fn ping(
+    config: &ConfigFile,
+    repository: &RepositoryInfo,
+) -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
     let mut last_commit = String::from("");
     loop {
         // Make request
-        let res = send_request(&repository.url, token, &client).await?;
+        let res = send_request(&repository.url, &config.token, &client).await?;
 
-        // Panic if some error
+        // Panic if an error occured
         if !res.status().is_success() {
-            println!("Failed to fetch data: {}", res.status());
+            let msg: String = format!("Failed to fetch data: {}", res.status());
+            if res.status() == 401 {
+                panic!("{}", msg);
+            }
+            println!("{}", msg);
             continue;
         }
 
         let body = res.text().await?;
-        let response: Commit = serde_json::from_str(&body).expect("Failed to parse response body");
+        let response: Commit = serde_json::from_str(&body)?;
 
         // Check for new commits
         if last_commit != response.sha {
@@ -38,23 +63,25 @@ pub async fn ping(token: &str, root_dir: &str, repository: &RepositoryInfo) -> R
                 "https://github.com/{}/{}.git",
                 repository.author, repository.name
             );
-            pull_repository(&url, root_dir).expect("Failed to fetch repository");
+            pull_repository(&url, &config.destination)?;
+            build(&config.services)?;
         }
         time::sleep(Duration::from_secs(60)).await;
     }
 }
 
 async fn send_request(url: &str, token: &str, client: &Client) -> Result<Response, Error> {
+    let fmt_token = format!("token {}", token);
     let response = client
         .get(url)
-        .header("Authorization", token)
+        .header("Authorization", fmt_token)
         .header("User-Agent", "request")
         .send()
         .await?;
     Ok(response)
 }
 
-fn pull_repository(url: &str, root_dir: &str) -> Result<(), git2::Error> {
+fn pull_repository(url: &str, root_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     let destination = append_time(&root_dir);
 
     // Pull repository
@@ -65,12 +92,12 @@ fn pull_repository(url: &str, root_dir: &str) -> Result<(), git2::Error> {
         }
         Err(e) => match e.code() {
             git2::ErrorCode::Exists => {
-                let new_dest = update_destination(true, destination, 1);
+                let new_dest = update_destination(true, destination, 1)?;
                 println!("updated destination: {}", new_dest);
-                Repository::clone(url, &new_dest).expect("Failed to fetch repository");
+                Repository::clone(url, &new_dest)?;
                 Ok(())
             }
-            _ => Err(e),
+            _ => Err(Box::new(e)),
         },
     }
 }
@@ -81,14 +108,18 @@ fn pull_repository(url: &str, root_dir: &str) -> Result<(), git2::Error> {
 ///
 /// Panics if fails to split
 /// base path on underscores (_) into less than four pieces.
-pub fn update_destination(exists: bool, mut path: String, index: i32) -> String {
+pub fn update_destination(
+    exists: bool,
+    mut path: String,
+    index: i32,
+) -> Result<String, FolderFormatError> {
     if !exists {
-        return path;
+        return Ok(path);
     }
 
     let from_split = path.clone();
     let base_path: Vec<&str> = from_split.split("_").collect();
-    destination_fmt(&base_path, &mut path, index);
+    destination_fmt(&base_path, &mut path, index)?;
     update_destination(check_existance(&path), path, index + 1)
 }
 
@@ -104,9 +135,13 @@ fn check_existance(path: &str) -> bool {
 ///
 /// Panics if fails to split
 /// base path on underscores (_) into less than four pieces.
-fn destination_fmt(base_path: &[&str], path: &mut String, index: i32) {
+fn destination_fmt(
+    base_path: &[&str],
+    path: &mut String,
+    index: i32,
+) -> Result<(), FolderFormatError> {
     if base_path.len() < 4 {
-        panic!("Failed to format folder name. Try removing all repeating folders or try again in a minute.");
+        return Err(FolderFormatError::FailedToFormat);
     }
     // assemble base of the destination path
     // "01" "Jan" "2025" "1046"
@@ -119,6 +154,7 @@ fn destination_fmt(base_path: &[&str], path: &mut String, index: i32) {
         path.push('0');
     }
     path.push_str(&index.to_string());
+    Ok(())
 }
 
 fn append_time(root: &str) -> String {

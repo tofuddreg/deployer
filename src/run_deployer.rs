@@ -34,10 +34,7 @@ pub async fn run(path: &str) {
         panic!("No services specified!");
     }
 
-    let token = format!("token {}", config.token);
-    ping(&token, &config.destination, &repository)
-        .await
-        .unwrap();
+    ping(&config, &repository).await.unwrap();
 }
 
 /// Formats URL from `github.com/author/their-repo` to

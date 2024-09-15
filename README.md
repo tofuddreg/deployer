@@ -7,6 +7,7 @@ and automatically pull your project into the specified directory.
 <br/>
 
 Note: Supports only projects from GitHub (will be fixed in the future)!
+Note 2: In the config file, use only global paths to directories.
 
 ## Documentation
 
@@ -19,9 +20,6 @@ To generate new configuration file template, use the following command:
 deployer config /path/to/config
 ```
 
-Note that you must specify **global** path to your desired cfg file location
-(will be fixed in the future).
-
 ### Make it up and running
 
 Once you have written the configuration file, you can run Deployer with this command:
@@ -30,5 +28,4 @@ Once you have written the configuration file, you can run Deployer with this com
 deployer run /path/to/config
 ```
 
-Deployer will check your repository for new commits every sixty seconds. <br />
-Note that you must specify **global** path to your cfg file (will be fixed in the future).
+Deployer will check your repository for new commits every 60 seconds.
