@@ -16,7 +16,6 @@ pub struct ServiceFile {
 pub struct Service {
     pub name: String,
     pub root_dir: String,
-    pub build_commands: Vec<String>,
     pub environment: Option<Vec<String>>,
     pub service_executable: String,
     pub overwrite: bool,
@@ -48,10 +47,6 @@ impl Default for Service {
         Service {
             name: "service-name".to_owned(),
             root_dir: "/var/www/your_repository/backend".to_owned(),
-            build_commands: vec![
-                "gleam build".to_owned(),
-                "mv ${root_dir}/build/erlang-shipment ${destination}".to_owned(),
-            ],
             environment: Some(vec![
                 "ENVIRONMENT=production".to_owned(),
                 "SECRET=some_secret_key".to_owned(),

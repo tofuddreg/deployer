@@ -2,11 +2,12 @@ use crate::generate_conf::file_struct::{Commit, ConfigFile};
 use build::build;
 use chrono::{prelude::DateTime, Local};
 use git2::Repository;
-use reqwest::{Client, Error, Response};
+use reqwest::{Client, Response};
+use std::error::Error;
 use std::{fmt::Display, path::Path};
 use tokio::time::{self, Duration};
 
-mod build;
+pub mod build;
 
 /// Local struct. Used to pass
 /// these three fields across functions.
@@ -17,7 +18,7 @@ pub struct RepositoryInfo {
 }
 
 #[derive(Debug)]
-enum FolderFormatError {
+pub enum FolderFormatError {
     FailedToFormat,
 }
 
@@ -33,10 +34,7 @@ impl Display for FolderFormatError {
 
 /// This function makes request to the GitHub's REST API.
 /// Also builds "services" that are specified in the cfg file.
-pub async fn ping(
-    config: &ConfigFile,
-    repository: &RepositoryInfo,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn ping(config: &ConfigFile, repository: &RepositoryInfo) -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
     let mut last_commit = String::from("");
     loop {
@@ -70,7 +68,7 @@ pub async fn ping(
     }
 }
 
-async fn send_request(url: &str, token: &str, client: &Client) -> Result<Response, Error> {
+async fn send_request(url: &str, token: &str, client: &Client) -> Result<Response, reqwest::Error> {
     let fmt_token = format!("token {}", token);
     let response = client
         .get(url)
@@ -81,7 +79,7 @@ async fn send_request(url: &str, token: &str, client: &Client) -> Result<Respons
     Ok(response)
 }
 
-fn pull_repository(url: &str, root_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn pull_repository(url: &str, root_dir: &str) -> Result<(), Box<dyn Error>> {
     let destination = append_time(&root_dir);
 
     // Pull repository
@@ -169,21 +167,18 @@ fn append_time(root: &str) -> String {
 mod tests {
     use super::*;
 
-    // Test destination modifier
     #[test]
     fn test_non_existent_path() {
         let non_existent_path = String::from("01_Sep_2024_1308");
         let result = update_destination(false, non_existent_path.clone(), 1);
-        assert_eq!(result, non_existent_path);
+        assert_eq!(result.unwrap(), non_existent_path);
     }
 
     #[test]
-    #[should_panic(
-        expected = "Failed to format folder name. Try removing all repeating folders or try again in a minute."
-    )]
     fn test_invalid_path_format() {
         let invalid_path = String::from("01_Sep_2024");
-        update_destination(true, invalid_path, 1);
+        let result = update_destination(true, invalid_path, 1);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -192,6 +187,6 @@ mod tests {
         let result = update_destination(true, valid_path, 1);
 
         // Ensure the format is correctly updated
-        assert_eq!(result, "01_Sep_2024_1307_01");
+        assert_eq!(result.unwrap(), "01_Sep_2024_1307_01");
     }
 }

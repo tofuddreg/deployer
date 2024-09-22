@@ -1,5 +1,7 @@
 use std::{env, io::ErrorKind};
 
+use generate_conf::file_struct::Service;
+
 mod generate_conf;
 mod help;
 mod macros;
@@ -14,6 +16,7 @@ async fn main() {
         "--help" => help::help(),
         "config" => handle_generate(&args),
         "run" => handle_run(&args).await,
+        "build" => handle_build(&args),
         _ => println!("{}", macros::HELP_MSG),
     }
 }
@@ -34,4 +37,13 @@ async fn handle_run(args: &[String]) {
     let mut path = String::from(&args[2]);
     generate_conf::validate_path(&mut path);
     run_deployer::run(&path).await;
+}
+
+use run_deployer::pull::build;
+
+fn handle_build(_args: &[String]) {
+    // arg_len!(args.len(), 3, macros::HELP_MSG);
+    let mut services: Vec<Service> = Vec::new();
+    services.push(Service::default());
+    build::build(&services).expect("Valid services only");
 }
