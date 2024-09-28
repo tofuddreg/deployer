@@ -1,3 +1,5 @@
+# Deployer
+
 <div align="left">
     <img src="https://img.shields.io/badge/Rust-DDA484?logo=Rust&logoColor=white" />
     <!-- <img src="https://img.shields.io/badge/NodeJS-5FA04E?logo=Node.js&logoColor=white" />
@@ -7,8 +9,6 @@
     <img src="https://img.shields.io/badge/Elixir-4B275F?logo=Elixir&logoColor=white" />
     <img src="https://img.shields.io/badge/Gleam-FF5CAA?logo=Gleam&logoColor=white" /> -->
 </div>
-
-# Deployer
 
 Don't waste your time on deploying your projects! <br />
 Deployer will check your repository's branch for new commits
