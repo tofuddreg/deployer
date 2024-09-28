@@ -3,7 +3,7 @@
 // such as "package.json", "gleam.toml" or "Cargo.toml".
 
 use crate::generate_conf::file_struct::Service;
-use std::{fmt::Display, io::{Error, ErrorKind, Result}, path::Path};
+use std::{fmt::Display, io::{Error, ErrorKind, Result}, path::Path, process::ExitStatus};
 use walkdir::{DirEntry, WalkDir};
 use std::process::Command;
 
@@ -37,24 +37,26 @@ impl Display for KeyFile {
     }
 }
 
+/// Build services looking at their `KeyFiles`
 pub fn build(_services: &[Service]) -> Result<()> {
     let path = Path::new("/Users/killer-whale/Desktop/test-destination/15_Sep_2024_1021");
     //for service in services {}
     let key_file = list_directories(&path)?;
     println!("Found a key file ({}) in {}", key_file.1, key_file.0.path().display());
 
-    // todo: replace with `match`
+    // todo: replace with `match` (maybe)
     if key_file.1.cmp(KeyFile::Rust) {
-        println!("key_file dir: {}", key_file.0.path()
-            .parent().unwrap().display());
-        let mut cmd = Command::new("cargo")
-            .arg("build")
-            .arg("--release")
-            .current_dir(&key_file.0.path().parent().unwrap())
-            .spawn()
-            .expect("Failed to build the Rust project");
-        let status = cmd.wait().unwrap();
-        println!("Build command has finished with status: {}", status);
+        let path = key_file.0
+            .path()
+            .parent()
+            .expect("Failed to get file's parent directory");
+        let status = build_rust(path);
+        println!("Build command has finished with status: {}",
+            status.expect("Failed to get exit status code"));
+        
+        let build = Path::new("");
+        let dest = Path::new("");
+        move_project(&build, &dest).expect("Failed to move project to the dest. dir.");
     } else if key_file.1.cmp(KeyFile::Gleam) {
         todo!();
     } else if key_file.1.cmp(KeyFile::NodeJS) {
@@ -65,7 +67,23 @@ pub fn build(_services: &[Service]) -> Result<()> {
     Ok(())
 }
 
-// Search for supported "key-files"
+/// Panics if fails to spawn the CMD.
+fn build_rust(path: &Path) -> Result<ExitStatus> {
+    let mut cmd = Command::new("cargo")
+        .arg("build")
+        .arg("--release")
+        .current_dir(path)
+        .spawn()
+        .expect("Failed to build the Rust project");
+    cmd.wait()
+}
+
+/// Move built file to the specified directory
+fn move_project(_project: &Path, _destination: &Path) -> Result<()> {
+    Ok(())
+}
+
+/// Search for supported "key-files"
 fn list_directories(path: &Path) -> Result<(DirEntry, KeyFile)> {
     for entry in WalkDir::new(path).follow_links(true).into_iter() {
         let tmp = entry?;
