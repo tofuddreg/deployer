@@ -10,6 +10,8 @@ use std::process::Command;
 enum KeyFile {
     Gleam,
     Rust,
+
+    // what if user uses Bun which is also using package.json?
     NodeJS,
 }
 
@@ -43,9 +45,16 @@ pub fn build(_services: &[Service]) -> Result<()> {
 
     // todo: replace with `match`
     if key_file.1.cmp(KeyFile::Rust) {
-        let mut cmd = Command::new("cargo build");
-        // execute the command
-        let _res = cmd.spawn()?;
+        println!("key_file dir: {}", key_file.0.path()
+            .parent().unwrap().display());
+        let mut cmd = Command::new("cargo")
+            .arg("build")
+            .arg("--release")
+            .current_dir(&key_file.0.path().parent().unwrap())
+            .spawn()
+            .expect("Failed to build the Rust project");
+        let status = cmd.wait().unwrap();
+        println!("Build command has finished with status: {}", status);
     } else if key_file.1.cmp(KeyFile::Gleam) {
         todo!();
     } else if key_file.1.cmp(KeyFile::NodeJS) {
