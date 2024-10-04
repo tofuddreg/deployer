@@ -5,7 +5,7 @@ use std::{
 
 pub mod file_struct;
 
-/// Generate config file if does not exist.
+/// Generate config file if it does not exist.
 /// Any `user_path` is valid but blank.
 ///
 /// Fails if file already exists.
@@ -26,14 +26,14 @@ pub fn generate(user_path: &str) -> Result<()> {
     }
 }
 
-/// Used in `generate(user_path: &str)` fuction
+/// Used in `generate(user_path: &str)` function
 /// to format path to the file.
 pub fn validate_path(path: &mut String) {
-    if !path.ends_with("deployer-config.json") {
+    if !path.ends_with("deployer-config.jsonc") {
         if !path.ends_with("/") {
             path.push_str("/");
         }
-        path.push_str("deployer-config.json");
+        path.push_str("deployer-config.jsonc");
     }
     println!("path: {}", path);
 }

@@ -103,21 +103,21 @@ mod tests {
     // Test URL formatter
     #[test]
     fn test_valid_url_fmt() {
-        let url = "github.com/tofuddreg/deployer";
+        let url = "github.com/Makefolder/deployer";
         let branch = "master";
         let repository_info = url_fmt(url, branch);
         assert_eq!(
             repository_info.url,
-            "https://api.github.com/repos/tofuddreg/deployer/commits/master"
+            "https://api.github.com/repos/Makefolder/deployer/commits/master"
         );
-        assert_eq!(repository_info.author, "tofuddreg");
+        assert_eq!(repository_info.author, "Makefolder");
         assert_eq!(repository_info.name, "deployer");
     }
 
     #[test]
     #[should_panic(expected = "Invalid repository domain!")]
     fn test_invalid_domain_url_fmt() {
-        let url = "gitlab.com/tofuddreg/deployer";
+        let url = "gitlab.com/Makefolder/deployer";
         let branch = "master";
         url_fmt(url, branch);
     }
@@ -133,7 +133,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid repository URL!")]
     fn test_invalid_name_url_fmt() {
-        let url = "github.com/tofuddreg/";
+        let url = "github.com/Makefolder/";
         let branch = "master";
         url_fmt(url, branch);
     }

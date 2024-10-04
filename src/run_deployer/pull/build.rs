@@ -1,17 +1,23 @@
-// Parse services', search for "key-files", build the project.
-// The "key-files" are file that are important for the project
+// Parse services, search for "key-files", build the project.
+// The "key-files" are files that are important for the project
 // such as "package.json", "gleam.toml" or "Cargo.toml".
 
 use crate::generate_conf::file_struct::Service;
-use std::{fmt::Display, io::{Error, ErrorKind, Result}, path::Path, process::ExitStatus};
-use walkdir::{DirEntry, WalkDir};
 use std::process::Command;
+use std::{
+    fmt::Display,
+    io::{Error, ErrorKind, Result},
+    path::Path,
+    process::ExitStatus,
+};
+use walkdir::{DirEntry, WalkDir};
 
 enum KeyFile {
     Gleam,
     Rust,
 
     // what if user uses Bun which is also using package.json?
+    // I mean... I should probably consider changing its name, maybe?
     NodeJS,
 }
 
@@ -25,7 +31,7 @@ impl KeyFile {
     }
     fn cmp(&self, value: KeyFile) -> bool {
         if self.value() == value.value() {
-            return true
+            return true;
         }
         false
     }
@@ -40,31 +46,50 @@ impl Display for KeyFile {
 /// Build services looking at their `KeyFiles`
 pub fn build(_services: &[Service]) -> Result<()> {
     let path = Path::new("/Users/killer-whale/Desktop/test-destination/15_Sep_2024_1021");
-    //for service in services {}
+    // for service in services {}
     let key_file = list_directories(&path)?;
-    println!("Found a key file ({}) in {}", key_file.1, key_file.0.path().display());
+    println!(
+        "Found a key file ({}) in {}",
+        key_file.1,
+        key_file.0.path().display()
+    );
 
     // todo: replace with `match` (maybe)
     if key_file.1.cmp(KeyFile::Rust) {
-        let path = key_file.0
+        let path = key_file
+            .0
             .path()
             .parent()
             .expect("Failed to get file's parent directory");
         let status = build_rust(path);
-        println!("Build command has finished with status: {}",
-            status.expect("Failed to get exit status code"));
-        
-        let build = Path::new("");
-        let dest = Path::new("");
-        move_project(&build, &dest).expect("Failed to move project to the dest. dir.");
+        println!(
+            "Build command has finished with status: {}",
+            status.expect("Failed to get exit status code")
+        );
+
+        // todo: Change hardcoded
+        let build = Path::new("/Users/killer-whale/Desktop/test-destination/15_Sep_2024_1021/target/release");
+        let dest = Path::new("/Users/killer-whale/Desktop/test-destination/15_Sep_2024_1021__build");
+        move_build(build, dest).expect("Failed to move project to the dest. dir.");
     } else if key_file.1.cmp(KeyFile::Gleam) {
         todo!();
     } else if key_file.1.cmp(KeyFile::NodeJS) {
         todo!();
     } else {
-        return Err(Error::new(ErrorKind::Other, "Failed to compare KeyFile."))
+        return Err(Error::new(ErrorKind::Other, "Failed to compare KeyFile."));
     }
     Ok(())
+}
+
+/// Move built file to the specified directory
+fn move_build(project: &Path, destination: &Path) -> Result<ExitStatus> {
+    let mut cmd = Command::new("mv")
+        .arg(project)
+        .arg(destination)
+        .current_dir(project)
+        .spawn()
+        .expect("Failed to move release");
+    cmd.wait()
 }
 
 /// Panics if fails to spawn the CMD.
@@ -74,13 +99,8 @@ fn build_rust(path: &Path) -> Result<ExitStatus> {
         .arg("--release")
         .current_dir(path)
         .spawn()
-        .expect("Failed to build the Rust project");
+        .expect("Failed to build Rust project");
     cmd.wait()
-}
-
-/// Move built file to the specified directory
-fn move_project(_project: &Path, _destination: &Path) -> Result<()> {
-    Ok(())
 }
 
 /// Search for supported "key-files"
@@ -93,10 +113,12 @@ fn list_directories(path: &Path) -> Result<(DirEntry, KeyFile)> {
                 "package.json" => return Ok((tmp, KeyFile::NodeJS)),
                 "Cargo.toml" => return Ok((tmp, KeyFile::Rust)),
                 "gleam.toml" => return Ok((tmp, KeyFile::Gleam)),
-                _ => continue, 
+                _ => continue,
             }
         }
     }
-    Err(Error::new(ErrorKind::Other, "Couldn't find any supported key-file."))
+    Err(Error::new(
+        ErrorKind::Other,
+        "Couldn't find any supported key-file.",
+    ))
 }
-

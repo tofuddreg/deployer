@@ -26,8 +26,8 @@ fn handle_generate(args: &[String]) {
     match generate_conf::generate(&args[2]) {
         Ok(()) => println!("Created successfully."),
         Err(e) => match e.kind() {
-            ErrorKind::AlreadyExists => panic!("The configuration file alredy exists."),
-            _ => panic!("An error occured while generating config file: {e}"),
+            ErrorKind::AlreadyExists => panic!("The configuration file already exists."),
+            _ => panic!("An error occurred while generating config file: {e}"),
         },
     }
 }

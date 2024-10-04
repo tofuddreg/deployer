@@ -1,4 +1,5 @@
 target
 Notes.txt
-deployer-config.json
+deployer-config.jsonc
 .DS_Store
+.idea

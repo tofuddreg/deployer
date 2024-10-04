@@ -22,11 +22,12 @@ pub enum FolderFormatError {
     FailedToFormat,
 }
 
-impl std::error::Error for FolderFormatError {}
+impl Error for FolderFormatError {}
 impl Display for FolderFormatError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let message = match self {
-            Self::FailedToFormat => "Failed to format folder name. Try removing all repeating folders or try again in a minute.",
+            Self::FailedToFormat =>
+                "Failed to format folder name. Try removing all repeating folders or try again in a minute.",
         };
         write!(f, "FolderFormatError: {message}")
     }
@@ -35,13 +36,13 @@ impl Display for FolderFormatError {
 /// This function makes request to the GitHub's REST API.
 /// Also builds "services" that are specified in the cfg file.
 pub async fn ping(config: &ConfigFile, repository: &RepositoryInfo) -> Result<(), Box<dyn Error>> {
-    let client = reqwest::Client::new();
+    let client = Client::new();
     let mut last_commit = String::from("");
     loop {
         // Make request
         let res = send_request(&repository.url, &config.token, &client).await?;
 
-        // Panic if an error occured
+        // Panic if an error occurred
         if !res.status().is_success() {
             let msg: String = format!("Failed to fetch data: {}", res.status());
             if res.status() == 401 {
@@ -118,13 +119,13 @@ pub fn update_destination(
     let from_split = path.clone();
     let base_path: Vec<&str> = from_split.split("_").collect();
     destination_fmt(&base_path, &mut path, index)?;
-    update_destination(check_existance(&path), path, index + 1)
+    update_destination(check_existence(&path), path, index + 1)
 }
 
 /// External parameter `exists: bool` in `update_destination`
-/// needed in function's tests. Therefore I had to make this
+/// needed in function's tests. Therefore, I had to make this
 /// function for `update_destination`'s internal use.
-fn check_existance(path: &str) -> bool {
+fn check_existence(path: &str) -> bool {
     let dir = Path::new(&path);
     dir.exists()
 }
