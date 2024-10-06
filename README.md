@@ -42,16 +42,20 @@ Deployer will check your repository for new commits every 60 seconds.
 
 ## Example `deployer-config.jsonc`
 
+This is an example configuration `jsonc` file.  
+Note that if project already **is** in the `build_dir`, it
+would `rm -rf` that project.
+
 ```json
 {
   "repository": "github.com/Makefolder/deployer",
   "branch": "main",
   "token": "tokentokenmysweettoken",
-  "pull_dir": "/usr/meykfolduh/var/my-pulls/pull_dir",
+  "pull_dir": "/usr/meykfolduh/var/my-pulls",
   "services": [
     {
       "name": "service-name",
-      "root_dir": "/usr/meykfolduh/var/my-pulls/pull_dir/service1",
+      "root_dir": "/usr/meykfolduh/var/my-pulls/service1",
       "build_dir": "/usr/meykfolduh/var/production"
     }
   ]
