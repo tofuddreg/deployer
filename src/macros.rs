@@ -23,3 +23,11 @@ macro_rules! arg_len {
         }
     };
 }
+
+#[macro_export]
+macro_rules! log {
+    ($($arg:tt)*) => {
+        let time: DateTime<Local> = Local::now();
+        println!("[{}] {}", time, format_args!($($arg)*));
+    }
+}

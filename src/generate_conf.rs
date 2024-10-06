@@ -1,7 +1,9 @@
+use chrono::{DateTime, Local};
 use std::{
     fs::File,
     io::{Result, Write},
 };
+use crate::log;
 
 pub mod file_struct;
 
@@ -35,7 +37,7 @@ pub fn validate_path(path: &mut String) {
         }
         path.push_str("deployer-config.jsonc");
     }
-    println!("path: {}", path);
+    log!("path: {}", path);
 }
 
 /// This function is for generating default deployer

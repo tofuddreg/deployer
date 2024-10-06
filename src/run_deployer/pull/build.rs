@@ -2,7 +2,7 @@
 // The "key-files" are files that are important for the project
 // such as "package.json", "gleam.toml" or "Cargo.toml".
 
-use crate::generate_conf::file_struct::Service;
+use crate::run_deployer::pull::{DateTime, Local};
 use std::process::Command;
 use std::{
     fmt::Display,
@@ -11,18 +11,19 @@ use std::{
     process::ExitStatus,
 };
 use walkdir::{DirEntry, WalkDir};
+use crate::log;
 
 enum KeyFile {
     Gleam,
     Rust,
 
     // what if user uses Bun which is also using package.json?
-    // I mean... I should probably consider changing its name, maybe?
+    // I mean... I should probably consider changing its name, eh?
     NodeJS,
 }
 
 impl KeyFile {
-    fn value<'a>(&self) -> &'a str {
+    fn value(&self) -> &str {
         match self {
             KeyFile::Gleam => "gleam.toml",
             KeyFile::Rust => "Cargo.toml",
@@ -44,17 +45,13 @@ impl Display for KeyFile {
 }
 
 /// Build services looking at their `KeyFiles`
-pub fn build(_services: &[Service]) -> Result<()> {
-    let path = Path::new("/Users/killer-whale/Desktop/test-destination/15_Sep_2024_1021");
-    // for service in services {}
-    let key_file = list_directories(&path)?;
-    println!(
-        "Found a key file ({}) in {}",
-        key_file.1,
-        key_file.0.path().display()
-    );
-
-    // todo: replace with `match` (maybe)
+pub fn build(
+    service_path: &Path,
+    build_dir: &Path,
+    service_name: String
+) -> Result<()> {
+    let key_file = list_directories(service_path)?;
+    log!("Found a key file ({}) in {}", key_file.1, key_file.0.path().display());
     if key_file.1.cmp(KeyFile::Rust) {
         let path = key_file
             .0
@@ -62,15 +59,16 @@ pub fn build(_services: &[Service]) -> Result<()> {
             .parent()
             .expect("Failed to get file's parent directory");
         let status = build_rust(path);
-        println!(
+        log!(
             "Build command has finished with status: {}",
             status.expect("Failed to get exit status code")
         );
 
-        // todo: Change hardcoded
-        let build = Path::new("/Users/killer-whale/Desktop/test-destination/15_Sep_2024_1021/target/release");
-        let dest = Path::new("/Users/killer-whale/Desktop/test-destination/15_Sep_2024_1021__build");
-        move_build(build, dest).expect("Failed to move project to the dest. dir.");
+        let rs_build_path =
+            format!("{}/target/release", path
+                .to_str().expect("Failed to get rust build path"));
+
+        move_build(Path::new(&rs_build_path), build_dir, service_name)?;
     } else if key_file.1.cmp(KeyFile::Gleam) {
         todo!();
     } else if key_file.1.cmp(KeyFile::NodeJS) {
@@ -82,11 +80,20 @@ pub fn build(_services: &[Service]) -> Result<()> {
 }
 
 /// Move built file to the specified directory
-fn move_build(project: &Path, destination: &Path) -> Result<ExitStatus> {
+fn move_build(project: &Path, destination: &Path, service_name: String) -> Result<ExitStatus> {
+    let tmp = format!("{}/{}", destination.to_str().unwrap(), service_name);
+    let destination = Path::new(&tmp);
+    if Path::exists(destination) {
+        let mut cmd = Command::new("rm")
+            .arg("-rf")
+            .arg(destination)
+            .spawn()
+            .expect("Failed to remove existing service.");
+        cmd.wait()?;
+    }
     let mut cmd = Command::new("mv")
         .arg(project)
         .arg(destination)
-        .current_dir(project)
         .spawn()
         .expect("Failed to move release");
     cmd.wait()

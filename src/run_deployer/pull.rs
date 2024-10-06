@@ -6,15 +6,16 @@ use reqwest::{Client, Response};
 use std::error::Error;
 use std::{fmt::Display, path::Path};
 use tokio::time::{self, Duration};
+use crate::log;
 
 pub mod build;
 
 /// Local struct. Used to pass
 /// these three fields across functions.
-pub struct RepositoryInfo {
+pub struct RepositoryInfo<'a> {
     pub url: String,
-    pub author: String,
-    pub name: String,
+    pub author: &'a str,
+    pub name: &'a str,
 }
 
 #[derive(Debug)]
@@ -23,6 +24,7 @@ pub enum FolderFormatError {
 }
 
 impl Error for FolderFormatError {}
+
 impl Display for FolderFormatError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let message = match self {
@@ -35,7 +37,10 @@ impl Display for FolderFormatError {
 
 /// This function makes request to the GitHub's REST API.
 /// Also builds "services" that are specified in the cfg file.
-pub async fn ping(config: &ConfigFile, repository: &RepositoryInfo) -> Result<(), Box<dyn Error>> {
+pub async fn ping<'a>(
+    config: &ConfigFile,
+    repository: &RepositoryInfo<'a>
+) -> Result<(), Box<dyn Error>> {
     let client = Client::new();
     let mut last_commit = String::from("");
     loop {
@@ -48,7 +53,6 @@ pub async fn ping(config: &ConfigFile, repository: &RepositoryInfo) -> Result<()
             if res.status() == 401 {
                 panic!("{}", msg);
             }
-            println!("{}", msg);
             continue;
         }
 
@@ -62,8 +66,14 @@ pub async fn ping(config: &ConfigFile, repository: &RepositoryInfo) -> Result<()
                 "https://github.com/{}/{}.git",
                 repository.author, repository.name
             );
-            pull_repository(&url, &config.destination)?;
-            build(&config.services)?;
+            let pull_dir = format!("{}/{}", config.pull_dir, get_time());
+            let pull_path = pull_repository(&url, &pull_dir)?;
+            let path = Path::new(&pull_path);
+
+            // todo: change hardcoded.
+            //  Put into for s in services
+            let build_dir = Path::new(&config.services[0].build_dir);
+            build(path, &build_dir, config.services[0].name.to_owned())?;
         }
         time::sleep(Duration::from_secs(60)).await;
     }
@@ -80,21 +90,19 @@ async fn send_request(url: &str, token: &str, client: &Client) -> Result<Respons
     Ok(response)
 }
 
-fn pull_repository(url: &str, root_dir: &str) -> Result<(), Box<dyn Error>> {
-    let destination = append_time(&root_dir);
-
+fn pull_repository(url: &str, root_dir: &str) -> Result<String, Box<dyn Error>> {
     // Pull repository
-    match Repository::clone(url, &destination) {
+    match Repository::clone(url, root_dir) {
         Ok(_) => {
-            println!("Fetched from remote branch to {}", destination);
-            Ok(())
+            log!("Fetched from remote branch to {}", root_dir);
+            Ok(root_dir.to_string())
         }
         Err(e) => match e.code() {
             git2::ErrorCode::Exists => {
-                let new_dest = update_destination(true, destination, 1)?;
-                println!("updated destination: {}", new_dest);
+                let new_dest = update_destination(true, root_dir.to_owned(), 1)?;
+                log!("updated destination: {}", new_dest);
                 Repository::clone(url, &new_dest)?;
-                Ok(())
+                Ok(new_dest)
             }
             _ => Err(Box::new(e)),
         },
@@ -130,7 +138,8 @@ fn check_existence(path: &str) -> bool {
     dir.exists()
 }
 
-/// Append suffix to the path (example: `01_Jan_2025_1046_01`).
+/// Append postfix to the path (example: `01_Jan_2025_1046_01`).
+/// So `_01`, `_08`, `_12` is the result.
 ///
 /// Panics if fails to split
 /// base path on underscores (_) into less than four pieces.
@@ -156,12 +165,9 @@ fn destination_fmt(
     Ok(())
 }
 
-fn append_time(root: &str) -> String {
-    let mut destination = String::from(root);
+fn get_time() -> String {
     let now: DateTime<Local> = Local::now();
-    let formatted_date = now.format("%d_%b_%Y_%H%M").to_string();
-    destination.push_str(&formatted_date);
-    destination
+    now.format("%d_%b_%Y_%H%M").to_string()
 }
 
 #[cfg(test)]

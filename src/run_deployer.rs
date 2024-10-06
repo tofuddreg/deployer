@@ -15,23 +15,18 @@ use pull::{ping, RepositoryInfo};
 /// repository link is invalid.
 pub async fn run(path: &str) {
     let config = deserialise(path);
-
     if config.token.is_empty() || config.token == "YOUR-GITHUB-TOKEN-HERE" {
         panic!("Github token is not specified!");
     }
-
     if config.repository.is_empty() || config.repository == "github.com/your-repository/link" {
         panic!("Github repository is not specified!");
     }
-
     let repository = url_fmt(&config.repository, &config.branch);
 
     // NOTE: Only global directories are valid yet
-    validate_dir(&config.services_dir);
-    validate_dir(&config.destination);
-
+    validate_dir(&config.pull_dir);
     if config.services.len() == 0 {
-        panic!("No services specified!");
+        panic!("Not a single service specified :<");
     }
 
     ping(&config, &repository).await.unwrap();
@@ -40,7 +35,7 @@ pub async fn run(path: &str) {
 /// Formats URL from `github.com/author/their-repo` to
 /// `https://api.github.com/repos/author/their-repo/commits`.
 /// Panics if URL is badly formatted.
-fn url_fmt(url: &str, branch: &str) -> RepositoryInfo {
+fn url_fmt<'a>(url: &'a str, branch: &'a str) -> RepositoryInfo<'a> {
     const INVALID_URL: &str = "Invalid repository URL!";
     let list: Vec<&str> = url.split('/').collect();
     if list.len() != 3 {
@@ -70,8 +65,8 @@ fn url_fmt(url: &str, branch: &str) -> RepositoryInfo {
 
     RepositoryInfo {
         url,
-        author: author.to_owned(),
-        name: repository.to_owned(),
+        author,
+        name: repository,
     }
 }
 
