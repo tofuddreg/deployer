@@ -23,7 +23,7 @@ Note 2: In the config file, use only global paths to directories.
 
 ### Configuration
 
-Firstly you wanna start with creating and modifying configuration file for Deployer. <br />
+Firstly you want to start with creating and modifying configuration file for Deployer. <br />
 To generate new configuration file template, use the following command:
 
 ```Bash
@@ -39,3 +39,21 @@ deployer run /path/to/config
 ```
 
 Deployer will check your repository for new commits every 60 seconds.
+
+## Example `deployer-config.jsonc`
+
+```json
+{
+  "repository": "github.com/Makefolder/deployer",
+  "branch": "main",
+  "token": "tokentokenmysweettoken",
+  "pull_dir": "/usr/meykfolduh/Desktop/test-destination/pull_dir",
+  "services": [
+    {
+      "name": "service-name",
+      "root_dir": "/usr/meykfolduh/var/my-pulls/pull_dir/service1",
+      "build_dir": "/usr/meykfolduh/var/production"
+    }
+  ]
+}
+```
