@@ -44,7 +44,7 @@ impl Display for KeyFile {
     }
 }
 
-/// Build services looking at their `KeyFiles`
+/// Build a service looking at its `KeyFiles`
 pub fn build(
     service_path: &Path,
     build_dir: &Path,
@@ -79,7 +79,7 @@ pub fn build(
     Ok(())
 }
 
-/// Move built file to the specified directory
+/// Move built project to the specified directory
 fn move_build(project: &Path, destination: &Path, service_name: String) -> Result<ExitStatus> {
     let tmp = format!("{}/{}", destination.to_str().unwrap(), service_name);
     let destination = Path::new(&tmp);

@@ -47,7 +47,7 @@ Deployer will check your repository for new commits every 60 seconds.
   "repository": "github.com/Makefolder/deployer",
   "branch": "main",
   "token": "tokentokenmysweettoken",
-  "pull_dir": "/usr/meykfolduh/Desktop/test-destination/pull_dir",
+  "pull_dir": "/usr/meykfolduh/var/my-pulls/pull_dir",
   "services": [
     {
       "name": "service-name",
