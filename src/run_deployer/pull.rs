@@ -28,6 +28,7 @@ impl Error for FolderFormatError {}
 impl Display for FolderFormatError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let message = match self {
+            // I don't think this can happen but who knows, right?
             Self::FailedToFormat =>
                 "Failed to format folder name. Try removing all repeating folders or try again in a minute.",
         };
@@ -36,7 +37,7 @@ impl Display for FolderFormatError {
 }
 
 /// This function makes request to the GitHub's REST API.
-/// Also builds "services" that are specified in the cfg file.
+/// Also builds "services" that are specified in the config file.
 pub async fn ping<'a>(
     config: &ConfigFile,
     repository: &RepositoryInfo<'a>
@@ -123,7 +124,6 @@ pub fn update_destination(
     if !exists {
         return Ok(path);
     }
-
     let from_split = path.clone();
     let base_path: Vec<&str> = from_split.split("_").collect();
     destination_fmt(&base_path, &mut path, index)?;

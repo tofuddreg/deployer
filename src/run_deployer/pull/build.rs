@@ -13,9 +13,12 @@ use std::{
 use walkdir::{DirEntry, WalkDir};
 use crate::log;
 
+mod project_trait;
+
 enum KeyFile {
     Gleam,
     Rust,
+    Go,
 
     // what if user uses Bun which is also using package.json?
     // I mean... I should probably consider changing its name, eh?
@@ -27,6 +30,7 @@ impl KeyFile {
         match self {
             KeyFile::Gleam => "gleam.toml",
             KeyFile::Rust => "Cargo.toml",
+            KeyFile::Go => "go.mod",
             KeyFile::NodeJS => "package.json",
         }
     }
@@ -44,7 +48,7 @@ impl Display for KeyFile {
     }
 }
 
-/// Build a service looking at its `KeyFiles`
+/// Build a service looking at its `KeyFiles`.
 pub fn build(
     service_path: &Path,
     build_dir: &Path,
@@ -71,6 +75,8 @@ pub fn build(
         move_build(Path::new(&rs_build_path), build_dir, service_name)?;
     } else if key_file.1.cmp(KeyFile::Gleam) {
         todo!();
+    } else if key_file.1.cmp(KeyFile::Go) {
+        todo!();
     } else if key_file.1.cmp(KeyFile::NodeJS) {
         todo!();
     } else {
@@ -79,7 +85,7 @@ pub fn build(
     Ok(())
 }
 
-/// Move built project to the specified directory
+/// Move built project to the specified directory.
 fn move_build(project: &Path, destination: &Path, service_name: String) -> Result<ExitStatus> {
     let tmp = format!("{}/{}", destination.to_str().unwrap(), service_name);
     let destination = Path::new(&tmp);
@@ -100,6 +106,10 @@ fn move_build(project: &Path, destination: &Path, service_name: String) -> Resul
 }
 
 /// Panics if fails to spawn the CMD.
+#[deprecated(
+    since = "0.2.1",
+    note = "Use structures of projects that implement `Project trait`."
+)]
 fn build_rust(path: &Path) -> Result<ExitStatus> {
     let mut cmd = Command::new("cargo")
         .arg("build")
@@ -110,7 +120,7 @@ fn build_rust(path: &Path) -> Result<ExitStatus> {
     cmd.wait()
 }
 
-/// Search for supported "key-files"
+/// Search for supported `KeyFiles`.
 fn list_directories(path: &Path) -> Result<(DirEntry, KeyFile)> {
     for entry in WalkDir::new(path).follow_links(true).into_iter() {
         let tmp = entry?;
