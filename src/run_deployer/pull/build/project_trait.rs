@@ -12,7 +12,7 @@ pub struct Rust<'a> {
     build_dir: &'a str,
 }
 
-impl Project for Rust {
+impl<'a> Project for Rust<'a> {
     fn new() -> Self {
         Rust { build_dir: "/target/release" }
     }
@@ -37,7 +37,7 @@ pub struct Go<'a> {
     build_dir: &'a str,
 }
 
-impl Project for Go {
+impl<'a> Project for Go<'a> {
     fn new() -> Self {
         // it builds in root dir of a project
         Go { build_dir: "" }
@@ -57,7 +57,7 @@ pub struct Gleam<'a> {
     build_dir: &'a str,
 }
 
-impl Project for Gleam {
+impl<'a> Project for Gleam<'a> {
     fn new() -> Self {
         Gleam { build_dir: "/build/prod/erlang" }
     }

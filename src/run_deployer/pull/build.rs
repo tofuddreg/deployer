@@ -107,7 +107,7 @@ fn move_build(project: &Path, destination: &Path, service_name: String) -> Resul
 
 /// Panics if fails to spawn the CMD.
 #[deprecated(
-    since = "0.2.1",
+    since = "0.2.2",
     note = "Use structures of projects that implement `Project trait`."
 )]
 fn build_rust(path: &Path) -> Result<ExitStatus> {
