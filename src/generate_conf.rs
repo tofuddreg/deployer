@@ -1,9 +1,10 @@
 use chrono::{DateTime, Local};
+use std::fs::OpenOptions;
+use crate::log;
 use std::{
     fs::File,
     io::{Result, Write},
 };
-use crate::log;
 
 pub mod file_struct;
 
@@ -13,19 +14,27 @@ pub mod file_struct;
 /// Fails if file already exists.
 /// # Example usage:
 /// ```Rust
-/// let path = String::from(".");
-/// generate(&path).unwrap();
+/// let path: &str = ".";
+/// generate(path).unwrap();
 /// ```
 pub fn generate(user_path: &str) -> Result<()> {
     let mut path = String::from(user_path);
     validate_path(&mut path);
-    match File::create_new(&path) {
+    match create_file(&path) {
         Ok(mut file) => {
             write_config(&mut file)?;
             Ok(())
         }
-        Err(e) => return Err(e),
+        Err(e) => Err(e),
     }
+}
+
+fn create_file(path: &str) -> Result<File> {
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    Ok(file)
 }
 
 /// Used in `generate(user_path: &str)` function
